@@ -2,12 +2,35 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class Parser {
     private commandType argumentType;
     private String command;
+    String argument1;
+    int argument2;
     private BufferedReader br;
+    private static final ArrayList<String> ArithmeticCommandsList = new ArrayList<String>();
+
+    static {
+        ArithmeticCommandsList.add("add");
+        ArithmeticCommandsList.add("sub");
+        ArithmeticCommandsList.add("neg");
+        ArithmeticCommandsList.add("eq");
+        ArithmeticCommandsList.add("gt");
+        ArithmeticCommandsList.add("lt");
+        ArithmeticCommandsList.add("and");
+        ArithmeticCommandsList.add("or");
+        ArithmeticCommandsList.add("not");
+
+
+    }
+
     Parser(String filename) throws FileNotFoundException{
+        argumentType = null;
+        argument2 = -1;
+        argument1 = "";
+
         try{
             br = new BufferedReader(new FileReader(filename));
         }
@@ -31,11 +54,15 @@ public class Parser {
                     }
                 }
                 catch (IOException ex){
-                    ex.printStackTrace();                }
+                    ex.printStackTrace();
+                }
+                finally {
+                    break;
+                }
 
             }
-            readLine = readLine.replaceAll("\\s", "").replaceAll("//.*","");
-            if (readLine.length() !=0 ){
+            readLine = readLine.replaceAll("//.*","");
+            if (readLine.length() !=0 && !readLine.trim().equals("") && !readLine.trim().equals("\n") ){
                 command = readLine;
                 break;
             }
@@ -47,25 +74,47 @@ public class Parser {
 
     public commandType commandType(){
         String[] args = command.split(" ");
-        String argument1;
-        int argument2;
-        if (args.length == 1){
-            if (args[0].equals("add") || args[0].equals("sub") || args[0].equals("neg")
-             || args[0].equals("eq") || args[0].equals("gt") || args[0].equals("gt") || args[0].equals("and") 
-            || args[0].equals("or") || args[0].equals("not")){
-                argumentType = commandType.C_ARITHMETIC;
-                argument1 = args[0];
-            }
-        } else if (args.length == 3) {
-            if (args[0].equals("push")){
+        if (ArithmeticCommandsList.contains(args[0])){
+            argumentType = commandType.C_ARITHMETIC;
+            argument1 = args[0];
+        } else if (args[0].equals("return")) {
+            argumentType = commandType.C_RETURN;
+            argument1 = args[0];
 
-            }
-            else if(args[0].equals("pop")){
-
-            }
-            
         }
+        else{
+            argument1 = args[1];
+            if(args[0].equals("push")){
+                argumentType = commandType.C_PUSH;
+                argument2 = Integer.parseInt(args[2]);
+                
+            } else if (args[0].equals("pop")) {
+                argumentType = commandType.C_POP;
+                argument2 = Integer.parseInt(args[2]);
+
+                
+            }
+            else {
+                throw  new IllegalArgumentException("Unknown Command");
+            }
+        }
+        return argumentType;
 
 
+
+    }
+
+    public String getCommand(){
+        return command;
+    }
+
+
+    public String getArgument1(){
+        return argument1;
+
+    }
+
+    public int getArgument2(){
+        return argument2;
     }
 }
