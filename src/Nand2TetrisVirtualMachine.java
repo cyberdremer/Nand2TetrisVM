@@ -41,19 +41,29 @@ public class Nand2TetrisVirtualMachine {
        }
        writeOut = new File(fileOutPath);
        codeWriter = new CodeWriter(writeOut);
+       codeWriter.writeInit();
        for (File f:vmFiles){
+           codeWriter.changeFileName(f);
            Parser parser = new Parser(f.getAbsolutePath());
            parser.advance();
-           commandType c;
+           commandType c = null;
            while (parser.getCommand() != null){
                c = parser.commandType();
-               if (c.equals(commandType.C_ARITHMETIC)){
-                   codeWriter.writeArithmetic(parser.getArgument1());
+               switch (c){
+                   case C_ARITHMETIC -> codeWriter.writeArithmetic(parser.getArgument1());
+                   case C_POP -> codeWriter.WritePushPop(c,parser.getArgument1(), parser.getArgument2());
+                   case C_PUSH -> codeWriter.WritePushPop(c,parser.getArgument1(), parser.getArgument2());
+                   case C_LABEL -> codeWriter.writeLabel(parser.getArgument1());
+                   case C_IF -> codeWriter.writeIf(parser.getArgument1());
+                   case C_GOTO -> codeWriter.writeGoto(parser.getArgument1());
+                   case C_CALL -> codeWriter.writeCall(parser.getArgument1(), parser.getArgument2());
+                   case C_FUNCTION -> codeWriter.writeFunction(parser.getArgument1(), parser.getArgument2());
+                   case C_RETURN -> codeWriter.writeReturn();
+                   default -> throw new IllegalArgumentException("Command not found");
 
-               } else if (c.equals(commandType.C_POP) || c.equals(commandType.C_PUSH)) {
-                   codeWriter.WritePushPop(c,parser.getArgument1(), parser.getArgument2());
 
                }
+
                parser.advance();
 
            }

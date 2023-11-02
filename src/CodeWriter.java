@@ -1,12 +1,19 @@
 import java.io.*;
 import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class CodeWriter {
     private FileWriter writeToOutput = null;
+    private static final Pattern recognizeLabel = Pattern.compile("^[^0-9][0-9A-Za-z\\_\\:\\.\\$]+");
     private int arithmeticOp;
+    private int numOfLabels = 0;
+
+    private String fileName = "";
     CodeWriter(File fileIn) throws FileNotFoundException {
 
         try{
+            fileName = fileIn.getName();
             writeToOutput = new FileWriter(fileIn);
             arithmeticOp = 0;
 
@@ -17,38 +24,39 @@ public class CodeWriter {
         }
     }
 
-    public void setFileName(String filename){
-
-
+    public void changeFileName(File file){
+        fileName = file.getName();
     }
+
+
 
     public void writeArithmetic(String command) throws IOException {
         if (command.equals("add")){
-            writeToOutput.write(arithmeticCommandTemplate() + "M=D+M\n");
+            writeToOutput.write(arithmeticCommandTemplate() + "M=M+D\n");
         } else if (command.equals("sub")) {
-            writeToOutput.write(arithmeticCommandTemplate() + "M=D-M\n");
+            writeToOutput.write(arithmeticCommandTemplate() + "M=M-D\n");
         } else if (command.equals("neg")) {
-            writeToOutput.write("@SP\n" + "A=M\n" + "A=A-1\n" + "M=-M\n");
+            writeToOutput.write("D=0\n@SP\nA=M-1\nM=D-M\n");
 
         } else if (command.equals("and")){
-            writeToOutput.write(arithmeticCommandTemplate() + "M=D&M\n");
+            writeToOutput.write(arithmeticCommandTemplate() + "M=M&D\n");
             
         } else if (command.equals("or")) {
-            writeToOutput.write(arithmeticCommandTemplate() + "M=D|M\n");
+            writeToOutput.write(arithmeticCommandTemplate() + "M=M|D\n");
         } else if (command.equals("not")) {
-            writeToOutput.write(arithmeticCommandTemplate() + "M=!M\n");
+            writeToOutput.write("@SP\nA=M-1\nM=!M\n");
 
         } else if (command.equals("eq")) {
-            writeToOutput.write(arithmeticCommandTemplateComparison("JEQ"));
+            writeToOutput.write(arithmeticCommandTemplateComparison("JNE"));
             arithmeticOp++;
 
         } else if (command.equals("gt")) {
-            writeToOutput.write(arithmeticCommandTemplateComparison("JGT"));
+            writeToOutput.write(arithmeticCommandTemplateComparison("JLE"));
             arithmeticOp++;
             
         }
         else if (command.equals("lt")){
-            writeToOutput.write(arithmeticCommandTemplateComparison("JLT"));
+            writeToOutput.write(arithmeticCommandTemplateComparison("JGE"));
             arithmeticOp++;
         } else if (command.equals("end")) {
             writeToOutput.write("(END" + ")\n" + "@END\n" + "0;JMP\n");
@@ -65,15 +73,25 @@ public class CodeWriter {
 
     }
     private String arithmeticCommandTemplateComparison(String cmp){
-        return "@SP\n" + "AM=M-1\n"
-                + "D=M\n" + "@SP\n" +
-                "AM=M-1\n" + "D=M-D\n" +
-                "@FALSE\n" + arithmeticOp + "\n" +
-                "D;" + cmp +"\n" +
-                "@SP\n" + "A=M-1\n" +"M=-1\n" +
+        return "@SP\n" +
+                "AM=M-1\n"
+                + "D=M\n"
+                + "A=A-1\n"
+                + "D=M-D\n"
+                + "@FALSE"
+                + arithmeticOp
+                + "\n"
+                + "D;" + cmp +"\n" +
+                "@SP\n"
+                +"A=M-1\n"
+                +"M=-1\n" +
                 "@CONTINUE" + arithmeticOp + "\n" +
-                "0;JMP\n" + "(FALSE " + arithmeticOp + ")\n"+
-                "@SP\n" + "A=M-1\n" + "M=0\n" + "(CONTINUE" + arithmeticOp + ")\n";
+                "0;JMP\n"
+                + "(FALSE" + arithmeticOp + ")\n"+
+                "@SP\n"
+                + "A=M-1\n"
+                + "M=0\n"
+                + "(CONTINUE" + arithmeticOp + ")\n";
 
 
 
@@ -81,7 +99,7 @@ public class CodeWriter {
     public void WritePushPop(commandType cType, String segment, int index) throws IOException {
         if (cType.equals(commandType.C_PUSH)){
             if (segment.equals("constant")){
-                writeToOutput.write("@" + index + "\n" + "D=A\n" + "A=M\n" + "M=D\n" + "@SP\n" + "M=M+1\n");
+                writeToOutput.write("@" + index + "\n" + "D=A\n" +"@SP\n" + "A=M\n" + "M=D\n" + "@SP\n" + "M=M+1\n");
 
             } else if (segment.equals("local")) {
                 writeToOutput.write(pushCommandTemplate("LCL",index,false));
@@ -103,7 +121,7 @@ public class CodeWriter {
                 writeToOutput.write(pushCommandTemplate("THAT", index, true));
 
             } else if (segment.equals("static")) {
-                writeToOutput.write(pushCommandTemplate(String.valueOf(index + 16), index, true));
+                writeToOutput.write("@" + fileName + index + "\n" + "D=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n");
 
             }
             else {
@@ -132,7 +150,7 @@ public class CodeWriter {
                 writeToOutput.write(popCommandTemplate("THAT", index, true));
 
             } else if (segment.equals("static")) {
-                writeToOutput.write(popCommandTemplate(String.valueOf(index + 16), index, true));
+                writeToOutput.write("@" + fileName + index  + "\nD=A\n@R13\nM=D\n@SP\nAM=M-1\nD=M\n@R13\nA=M\nM=D\n");
 
             }
             else {
@@ -162,6 +180,7 @@ public class CodeWriter {
         return "@" + segment + "\n" +
                 memAddress +
                 "@R13\n" +
+                "M=D\n" +
                 "@SP\n" +
                 "AM=M-1\n" +
                 "D=M\n" +
@@ -175,6 +194,114 @@ public class CodeWriter {
     public void closeFile() throws IOException {
         writeToOutput.close();
     }
+
+    public void writeInit() throws IOException {
+        writeToOutput.write("@256\n" + "D=A\n" + "@SP\n" + "M=D\n");
+        writeCall("Sys.init", 0);
+
+    }
+    public void writeLabel(String label) throws IOException {
+        Matcher verifyLabel = recognizeLabel.matcher(label);
+        if (verifyLabel.find()){
+            writeToOutput.write("(" + label + ")\n");
+        }
+        else {
+            throw new IllegalArgumentException("Invalid label");
+        }
+
+    }
+    public void writeGoto(String label) throws IOException {
+        Matcher verifyLabel = recognizeLabel.matcher(label);
+        if (verifyLabel.find()){
+            writeToOutput.write("@" + label + "\n" + "0;JMP\n");
+        }
+        else {
+            throw new IllegalArgumentException("Invalid label");
+        }
+
+
+    }
+    public void writeIf(String label) throws IOException {
+        Matcher verifyLabel = recognizeLabel.matcher(label);
+        if (verifyLabel.find()){
+            writeToOutput.write("@SP\n" + "AM=M-1\n" + "D=M\n" + "@" + label + "\n" +
+                    "D;JNE\n");
+        }
+        else {
+            throw new IllegalArgumentException("Invalid label");
+        }
+
+    }
+    public void writeCall(String funcName, int numOfArg) throws IOException {
+        String newLabel = "RETURN_LABEL" + numOfLabels++;
+        writeToOutput.write("@" + newLabel + "\n" + "D=A\n" + "@SP\n" + "A=M\n" + "M=D\n" + "@SP\nM=M+1\n");
+        writeToOutput.write(pushCommandTemplate("LCL",0,true));
+        writeToOutput.write(pushCommandTemplate("ARG",0,true));
+        writeToOutput.write(pushCommandTemplate("THIS",0,true));
+        writeToOutput.write(pushCommandTemplate("THAT",0,true));
+
+        writeToOutput.write("@SP\n" +
+                "D=M\n" + "@5\n" + "D=D-A\n" + "@" + numOfArg + "\n" +
+                "D=D-A\n" + "@ARG\n" + "M=D\n" +
+                "@SP\n" + "D=M\n" +
+                "@LCL\n" + "M=D\n" +
+                "@" + funcName + "\n" +
+                "0;JMP\n" +
+                "(" + newLabel + ")\n");
+
+
+
+
+
+
+
+
+    }
+    public void writeFunction(String functionName, int numLocal) throws IOException {
+        writeToOutput.write("(" + functionName + ")\n");
+        for (int i = 0; i < numLocal; i++){
+            WritePushPop(commandType.C_PUSH, "constant" , 0);
+        }
+
+
+
+
+
+    }
+
+    public void writeReturn() throws IOException {
+        writeToOutput.write("@LCL\n" + "D=M\n" +
+                "@R11\n" + "M=D\n" +
+                "@5\n" + "A=D-A\n" +
+                "D=M\n" + "@R12\n" + "M=D\n" +
+                popCommandTemplate("ARG", 0, false) +
+                "@ARG\n" + "D=M\n" +
+                "@SP\n" + "M=D+1\n"+
+                restoreTemplate("THAT") +
+                restoreTemplate("THIS") +
+                restoreTemplate("ARG") +
+                restoreTemplate("LCL") +
+                "@R12\n" + "A=M\n" + "0;JMP\n"
+                );
+
+
+
+    }
+
+
+    public String restoreTemplate(String memSegment){
+        return "@R11\n" + "D=M-1\n" +
+                "AM=D\n" +
+                "D=M\n" +
+                "@" + memSegment + "\n" +
+                "M=D\n";
+
+
+    }
+
+
+
+
 
 
 }

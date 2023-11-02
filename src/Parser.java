@@ -86,15 +86,36 @@ public class Parser {
             argument1 = args[1];
             if(args[0].equals("push")){
                 argumentType = commandType.C_PUSH;
-                argument2 = Integer.parseInt(args[2]);
+                String tempargs2 = args[2].trim();
+                argument2 = Integer.parseInt(tempargs2);
                 
             } else if (args[0].equals("pop")) {
                 argumentType = commandType.C_POP;
-                argument2 = Integer.parseInt(args[2]);
+                String tempargs2 = args[2].trim();
+                argument2 = Integer.parseInt(tempargs2);
 
                 
-            }
-            else {
+            } else if (args[0].equals("label")) {
+                argumentType = commandType.C_LABEL;
+                
+                
+            } else if (args[0].equals("if-goto")) {
+                argumentType = commandType.C_IF;
+                
+            } else if (args[0].equals("goto")) {
+                argumentType = commandType.C_GOTO;
+                
+            } else if (args[0].equals("function")) {
+                argumentType = commandType.C_FUNCTION;
+                String tempargs2 = args[2].trim();
+                argument2 = Integer.parseInt(tempargs2);
+
+            } else if (args[0].equals("call")) {
+                argumentType = commandType.C_CALL;
+                String tempargs2 = args[2].trim();
+                argument2 = Integer.parseInt(tempargs2);
+
+            } else {
                 throw  new IllegalArgumentException("Unknown Command");
             }
         }
