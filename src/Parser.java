@@ -12,6 +12,9 @@ public class Parser {
     private BufferedReader br;
     private static final ArrayList<String> ArithmeticCommandsList = new ArrayList<String>();
 
+
+
+    //Initialize a list of arithmetic commands.
     static {
         ArithmeticCommandsList.add("add");
         ArithmeticCommandsList.add("sub");
@@ -26,6 +29,8 @@ public class Parser {
 
     }
 
+
+    //Open a file, throw a FileNotFound exception if the file is not found.
     Parser(String filename) throws FileNotFoundException{
         argumentType = null;
         argument2 = -1;
@@ -42,6 +47,8 @@ public class Parser {
 
 
 
+
+    //March through the file and find a command, ignores comments and whitespace.
     public void advance() throws IOException{
         String readLine;
         while (true){
@@ -71,6 +78,10 @@ public class Parser {
 
 
 
+
+
+    //Determine the commandType of the read line, sets the appropriate args and stores the command.
+    //Done through tokenizing.
 
     public commandType commandType(){
         String[] args = command.split(" ");

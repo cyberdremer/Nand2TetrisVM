@@ -11,6 +11,7 @@ public class CodeWriter {
 
     private String fileName = "";
     CodeWriter(File fileIn) throws FileNotFoundException {
+        //Open file, if unable to open, throw FileNotFoundException
 
         try{
             fileName = fileIn.getName();
@@ -24,12 +25,14 @@ public class CodeWriter {
         }
     }
 
+    //Change the name of the file, necessary for dealing with multiple files for compilation
     public void changeFileName(File file){
         fileName = file.getName();
     }
 
 
 
+    //Take in a command and parse through for specific keywords, and apply correct assembly instructions
     public void writeArithmetic(String command) throws IOException {
         if (command.equals("add")){
             writeToOutput.write(arithmeticCommandTemplate() + "M=M+D\n");
@@ -68,10 +71,13 @@ public class CodeWriter {
 
     }
 
+
+    //Template for arithmetic commands such as add, subtract, and, or.
     private String arithmeticCommandTemplate(){
         return "@SP\n" + "AM=M-1\n" + "D=M\n" + "A=A-1\n";
 
     }
+    //Template for arithmetic commands that involved jumping to specific labels.
     private String arithmeticCommandTemplateComparison(String cmp){
         return "@SP\n" +
                 "AM=M-1\n"
@@ -96,6 +102,8 @@ public class CodeWriter {
 
 
     }
+
+    //Write or push and pop, depending on the command type, then dependent on the segment that is parsed.
     public void WritePushPop(commandType cType, String segment, int index) throws IOException {
         if (cType.equals(commandType.C_PUSH)){
             if (segment.equals("constant")){
@@ -166,6 +174,9 @@ public class CodeWriter {
 
     }
 
+
+    //Template for push command, takes in an index and whether or not we are working with a memory address to pus
+
     private String pushCommandTemplate(String segment, int index, boolean DirectMem){
         String memAddress = (DirectMem)? "" : "@" + index + "\n" + "A=D+A\nD=M\n";
         return "@" + segment + "\n" +
@@ -175,6 +186,7 @@ public class CodeWriter {
                 "M=M+1\n";
     }
 
+    //Template for pop command, takes in an index and is affected by whether or not we are directly accessing a memory address.
     private String popCommandTemplate(String segment, int index, boolean DirectMem){
         String memAddress = (DirectMem)? "D=A\n" :"D=M\n@" + index + "\nD=D+A\n";
         return "@" + segment + "\n" +
@@ -195,11 +207,13 @@ public class CodeWriter {
         writeToOutput.close();
     }
 
+    //Function to write an initialization assembly block
     public void writeInit() throws IOException {
         writeToOutput.write("@256\n" + "D=A\n" + "@SP\n" + "M=D\n");
         writeCall("Sys.init", 0);
 
     }
+    //Generate labels
     public void writeLabel(String label) throws IOException {
         Matcher verifyLabel = recognizeLabel.matcher(label);
         if (verifyLabel.find()){
@@ -210,6 +224,7 @@ public class CodeWriter {
         }
 
     }
+    //Write a GOTO label
     public void writeGoto(String label) throws IOException {
         Matcher verifyLabel = recognizeLabel.matcher(label);
         if (verifyLabel.find()){
@@ -221,6 +236,7 @@ public class CodeWriter {
 
 
     }
+    //Write an assembly function for a write-if
     public void writeIf(String label) throws IOException {
         Matcher verifyLabel = recognizeLabel.matcher(label);
         if (verifyLabel.find()){
@@ -232,6 +248,9 @@ public class CodeWriter {
         }
 
     }
+
+
+    //Write the assembly function for a Call, push LCL, ARG, THIS and THAT.
     public void writeCall(String funcName, int numOfArg) throws IOException {
         String newLabel = "RETURN_LABEL" + numOfLabels++;
         writeToOutput.write("@" + newLabel + "\n" + "D=A\n" + "@SP\n" + "A=M\n" + "M=D\n" + "@SP\nM=M+1\n");
@@ -257,6 +276,7 @@ public class CodeWriter {
 
 
     }
+    //Initialize the vars for a function
     public void writeFunction(String functionName, int numLocal) throws IOException {
         writeToOutput.write("(" + functionName + ")\n");
         for (int i = 0; i < numLocal; i++){
@@ -268,6 +288,9 @@ public class CodeWriter {
 
 
     }
+
+
+    //Template for writing the function return, restores this, that arg and lcl of the caller.
 
     public void writeReturn() throws IOException {
         writeToOutput.write("@LCL\n" + "D=M\n" +
@@ -287,6 +310,9 @@ public class CodeWriter {
 
 
     }
+
+
+    //Template for a restore depending on the memory template.
 
 
     public String restoreTemplate(String memSegment){
