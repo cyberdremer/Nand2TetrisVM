@@ -41,7 +41,7 @@ public class Nand2TetrisVirtualMachine {
        }
        writeOut = new File(fileOutPath);
        codeWriter = new CodeWriter(writeOut);
-       codeWriter.writeInit();
+       /*codeWriter.writeInit();*/
        for (File f:vmFiles){
            codeWriter.changeFileName(f);
            Parser parser = new Parser(f.getAbsolutePath());
